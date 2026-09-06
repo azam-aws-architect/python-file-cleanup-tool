@@ -1,0 +1,95 @@
+import os
+import shutil
+from datetime import datetime
+
+# Apne folder ka path yahan do
+TARGET_DIRECTORY = r"C:\Users\pc\Downloads"
+
+# Extensions ke hisab se categories
+DIRECTORIES = {
+    "Images": [".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp"],
+    "Documents": [".pdf", ".docx", ".txt", ".xlsx", ".pptx", ".csv", ".doc"],
+    "Archives": [".zip", ".rar", ".7z", ".tar", ".gz"],
+    "Code": [".py", ".js", ".html", ".css", ".json", ".tf", ".cpp", ".java"],
+    "Setup Files": [".exe", ".msi", ".iso", ".apk"]
+}
+
+def get_unique_path(destination_folder, filename):
+    """Duplicate file se bachne ke liye unique path banata hai"""
+    base_name, extension = os.path.splitext(filename)
+    counter = 1
+    new_filename = filename
+    destination_path = os.path.join(destination_folder, new_filename)
+    
+    while os.path.exists(destination_path):
+        new_filename = f"{base_name}_{counter}{extension}"
+        destination_path = os.path.join(destination_folder, new_filename)
+        counter += 1
+        
+    return destination_path
+
+def organize_files():
+    if not os.path.exists(TARGET_DIRECTORY):
+        print(f"Directory nahi mili: {TARGET_DIRECTORY}")
+        return
+
+    moved_count = 0
+    category_counts = {cat: 0 for cat in DIRECTORIES.keys()}
+    report_lines = [f"--- Cleanup Report: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n"]
+    
+    print("Smart sorting aur category breakdown shuru ho chuki hai...\n")
+
+    for filename in os.listdir(TARGET_DIRECTORY):
+        file_path = os.path.join(TARGET_DIRECTORY, filename)
+
+        # Agar folder hai ya report file hai toh skip karo
+        if os.path.isdir(file_path) or filename == "cleanup_report.txt":
+            continue
+
+        file_ext = os.path.splitext(filename)[1].lower()
+        moved = False
+
+        for category, extensions in DIRECTORIES.items():
+            if file_ext in extensions:
+                category_folder = os.path.join(TARGET_DIRECTORY, category)
+                
+                # Agar category folder nahi hai toh bana lo
+                if not os.path.exists(category_folder):
+                    os.makedirs(category_folder)
+
+                target_path = get_unique_path(category_folder, filename)
+                shutil.move(file_path, target_path)
+                
+                final_name = os.path.basename(target_path)
+                log_msg = f"Moved: {filename} ---> {category}/{final_name}"
+                print(log_msg)
+                report_lines.append(log_msg + "\n")
+                
+                moved_count += 1
+                category_counts[category] += 1
+                moved = True
+                break
+
+    # Summary breakdown prepare karna
+    summary_header = "\n=== Category Breakdown ==="
+    print(summary_header)
+    report_lines.append("\n" + summary_header + "\n")
+
+    for cat, count in category_counts.items():
+        summary_line = f" - {cat}: {count} files"
+        print(summary_line)
+        report_lines.append(summary_line + "\n")
+
+    total_line = f"\nTotal Files Organized: {moved_count}"
+    print(total_line)
+    report_lines.append(total_line + "\n")
+
+    # Report file save karna
+    report_path = os.path.join(TARGET_DIRECTORY, "cleanup_report.txt")
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.writelines(report_lines)
+
+    print(f"\nKaam tamam! Pori report 'cleanup_report.txt' mein save ho gayi hai.")
+
+if __name__ == "__main__":
+    organize_files()
